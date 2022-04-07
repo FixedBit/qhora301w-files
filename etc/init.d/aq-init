@@ -1,0 +1,16 @@
+#!/bin/sh /etc/rc.common
+# 
+# Init the 10gbe ports of the Qhora 301w using aq-fw-download
+# notice: this takes a long time!
+#
+ 
+START=99
+
+start() {
+        /sbin/aq-fw-download /lib/firmware/AQR-G4_v5.5.6-AQR_CIG_WIFI_ID44858_VER1745.cld eth5 0
+       sleep 1
+       /sbin/aq-fw-download /lib/firmware/AQR-G4_v5.5.6-AQR_CIG_WIFI_ID44858_VER1745.cld eth4 8
+       sleep 1
+       /usr/sbin/ssdk_sh debug phy set 0 0x4004c441 0x8
+       /usr/sbin/ssdk_sh debug phy set 8 0x4004c441 0x8
+}                 
