@@ -1,0 +1,43 @@
+#!/bin/sh /etc/rc.common
+#
+# Init the 10gbe ports of the QHora 301w using aq-fw-download
+#
+# Author: Jason Hawks <jason@fixedbit.com>
+#
+
+# Run this last after all the other scripts
+START=99
+
+# Wait for all of our background processess to complete and return a status
+background_wait() {
+    # Set our fail test variable
+    local FAIL=0
+    # Loop through all of our background jobs and wait for them
+    # If one fails then we increment $FAIL
+    for job in `jobs -p`; do
+        wait $job || let "FAIL+=1"
+    done
+    # If no errors we exit successfully, otherwise return failed response
+    [ "${FAIL}" == "0" ] && return 0 || return 1
+}
+
+start() {
+    # Outputting to /dev/kmsg for "dmesg" output
+    # We use some tricks to run both loaders in parallel
+    {
+        echo "Activating eth5" > /dev/kmsg;
+        /sbin/aq-fw-download /lib/firmware/AQR-G4_v5.5.6-AQR_CIG_WIFI_ID44858_VER1745.cld eth5 0 > /dev/null 2> /dev/kmsg;
+    } &
+    {
+        echo "Activating eth4" > /dev/kmsg;
+        /sbin/aq-fw-download /lib/firmware/AQR-G4_v5.5.6-AQR_CIG_WIFI_ID44858_VER1745.cld eth4 8 > /dev/null 2> /dev/kmsg;
+    } &
+    # Wait for both of the loaders to finish
+    background_wait
+    # Wait one second then issue commands to bind our 10Gbe
+    sleep 1
+    echo "Activating 10Gbe 1 as eth5" > /dev/kmsg
+    /usr/sbin/ssdk_sh debug phy set 0 0x4004c441 0x8 1> /dev/kmsg 2>&1
+    echo "Activating 10Gbe 2 as eth4" > /dev/kmsg
+    /usr/sbin/ssdk_sh debug phy set 8 0x4004c441 0x8 1> /dev/kmsg 2>&1
+}
